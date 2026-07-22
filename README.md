@@ -1,8 +1,19 @@
 # cloud-itonami-iso3166-bol
 
-Open ISO 3166 Blueprint for **BOL**: Bolivia.
+Open ISO 3166 Blueprint for **BOL**: Bolivia. **`:implemented`** --
+`src/marketentry/*` is a running langgraph-clj StateGraph actor: a
+MarketEntry-LLM advisor sealed behind an independent Market-Entry
+Compliance Governor. Flagship check `stale-business-registration-
+authority` (catches an LLM citing the wound-down FUNDEMPRESA private
+concession instead of the current public registrar SEPREC) plus
+`incumplido-listed` (SICOES 'incumplidos' non-compliant-supplier-list
+membership) and `nit-unverified` (SIN tax registration).
 
-This repository designs a forkable OSS business for an independent
+```
+clojure -M:dev:test
+```
+
+This repository designs **and implements** a forkable OSS business for an independent
 public-sector market-entry consultant: an already-incorporated operator
 (e.g. a `cloud-itonami-cofog-{code}`, `cloud-itonami-isco-{code}`,
 `cloud-itonami-unspsc-{segment}` or `cloud-itonami-{ISIC}` blueprint
@@ -40,6 +51,79 @@ conclusion the governor has not cleared. `:filing/submit` is never in any
 phase's `:auto` set — it always requires human sign-off (mirrors
 `cloud-itonami-M6910`'s `filing-submit-never-auto-at-any-phase`
 invariant).
+
+## Governor checks
+
+`marketentry.governor/check` runs every proposal through these HARD
+checks (a human approver cannot override a HARD violation) before the
+confidence-floor / actuation gate. Each check's regulatory fact is
+`marketentry.facts`-cited; source URLs below were fetched and verified
+this session, not invented:
+
+| Check | Fires on | Source |
+|---|---|---|
+| `no-spec-basis` | any `jurisdiction/assess`\|`filing/draft`\|`filing/submit` proposal that doesn't cite an official source | n/a (structural) |
+| `stale-business-registration-authority` **(flagship, currency trap)** | a proposal citing **FUNDEMPRESA** as the current business-registration authority -- FUNDEMPRESA operated the Registro de Comercio under a private concession model that Ley N° 1398 (1 de octubre de 2021) + Decreto Supremo N° 4596 (6 de octubre de 2021) wound down, transferring the function to the public entity **SEPREC** | https://www.seprec.gob.bo/wp-content/uploads/2025/10/Ley-1398-ley-de-registro-de-comercio.pdf ; https://www.seprec.gob.bo/index.php/breve-historia-o-resena-sobre-la-creacion-y-evolucion-de-la-entidad/ |
+| `evidence-incomplete` | `filing/draft`\|`filing/submit` before the jurisdiction's full evidence checklist (Matrícula de Comercio vigente / NIT activo / RUPE registration / authorized-representative confirmation) is on file | https://www.sicoes.gob.bo/portal/index.php ; https://www.impuestos.gob.bo/ |
+| `incumplido-listed` **(unconditional, per-submit)** | `filing/submit` where the engagement's own declared `:on-incumplidos-list?` is true -- SICOES's own live 'incumplidos' (non-compliant/defaulting supplier) portal section is a categorical bar to further participation | https://www.sicoes.gob.bo/portal/index.php (MODERATE confidence -- portal-feature-level, the specific NB-SABS article was not independently confirmed) |
+| `engagement-fee-mismatch` | `filing/submit` where `:claimed-fee` ≠ independently recomputed `base-fee + monthly-rate x monitoring-months` | n/a (arithmetic) |
+| `nit-unverified` | `filing/submit` where `:requires-nit?` is true but `:nit-verified?` is false -- NIT (Número de Identificación Tributaria) is a SEPARATE act performed by the Servicio de Impuestos Nacionales (SIN), a different body under a different ministry than SEPREC | https://www.impuestos.gob.bo/ |
+| `already-drafted` / `already-submitted` | a second `filing/draft`/`filing/submit` for the same engagement | n/a (structural, off dedicated `:drafted?`/`:submitted?` facts) |
+
+Public procurement itself is governed by SICOES (Sistema de
+Contrataciones Estatales, sicoes.gob.bo), whose own site names NB-SABS
+(Normas Básicas del Sistema de Administración de Bienes y Servicios,
+Decreto Supremo N° 0181) as its governing decree -- source:
+https://www.sicoes.gob.bo/portal/index.php. Owner-authority is modeled
+at the ministry level (Ministerio de Economía y Finanzas Públicas, MEFP)
+rather than a specific internal directorate, matching this family's
+no-fabricated-directorate discipline.
+
+### SEPREC / FUNDEMPRESA currency distinction
+
+Bolivia's business (commercial) registration function is **NOT** what
+an LLM's training data likely says. FUNDEMPRESA -- a private/mixed
+entity that performed the Registro de Comercio function under a state
+concession -- was wound down starting 2021: Ley N° 1398 "Ley de
+Registro de Comercio" (1 de octubre de 2021) + Decreto Supremo N° 4596
+(6 de octubre de 2021, "Crea el Servicio Plurinacional de Registro de
+Comercio – SEPREC y establece el plazo de transición del Registro de
+Comercio") transferred the function to **SEPREC** (Servicio
+Plurinacional de Registro de Comercio), a decentralized PUBLIC entity
+under the Ministerio de Desarrollo Productivo y Economía Plural
+(MDPyEP) -- the OPPOSITE direction of drift from a private-delegation
+model. `marketentry.facts/business-registration-authority-deprecated`
+names FUNDEMPRESA explicitly so `marketentry.governor`'s
+`spec-basis-violations` HARD-holds any proposal that cites it as
+current, regardless of confidence -- see `test/marketentry/
+governor_contract_test.clj`'s `stale-business-registration-authority-
+is-held-and-unoverridable` / `fresh-assess-cites-seprec-not-
+fundempresa`. This mirrors the exact currency-trap discipline
+`cloud-itonami-iso3166-isl` applies to the decommissioned Ríkiskaup
+(superseded by Fjársýslan/FMA).
+
+## Actuation
+
+`:filing/draft` and `:filing/submit` are the two real-world acts this
+actor performs (preparing a portal registration package, and actually
+submitting one on sicoes.gob.bo/RUPE). Two independent layers agree
+neither ever auto-commits:
+
+- **`marketentry.phase`**: `:filing/draft`/`:filing/submit` are
+  permanently absent from every rollout phase's `:auto` set (phase
+  0 through 3) — not a rollout milestone still to come, a structural
+  fact.
+- **`marketentry.governor`**: both ops carry
+  `:stake :actuation/draft-filing`/`:actuation/submit-filing`, members
+  of `governor/high-stakes`, which forces `:escalate?` even when the
+  proposal is otherwise clean.
+
+Every `filing/draft`/`filing/submit` therefore always reaches
+`operation.cljc`'s `:request-approval` node
+(`interrupt-before #{:request-approval}`) and pauses for a real human
+market-entry operator's sign-off — see `test/marketentry/
+governor_contract_test.clj`'s `draft-always-escalates-then-human-
+decides` / `submit-always-escalates-then-human-decides`.
 
 ## What this is NOT
 

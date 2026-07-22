@@ -32,9 +32,15 @@
 
 (defn- assess-jurisdiction
   "Per-jurisdiction market-entry evidence checklist draft. `:no-spec?`
-  injects the failure mode we must defend against: proposing a
-  checklist for a jurisdiction with NO official spec-basis."
-  [db {:keys [subject no-spec?]}]
+  injects the failure mode of proposing a checklist for a jurisdiction
+  with NO official spec-basis. `:stale-authority?` injects the failure
+  mode this vertical exists to defend against: an LLM whose training
+  data still says FUNDEMPRESA (the wound-down private concession) is
+  Bolivia's business-registration authority, instead of the current
+  SEPREC (public successor since Ley N° 1398 + D.S. N° 4596, 2021).
+  `marketentry.governor`'s `spec-basis-violations` MUST catch this and
+  HARD-hold it."
+  [db {:keys [subject no-spec? stale-authority?]}]
   (let [e (store/engagement db subject)
         iso3 (if no-spec? "ATL" (:jurisdiction e))
         sb (facts/spec-basis iso3)]
@@ -46,17 +52,22 @@
        :value      {:jurisdiction iso3 :checklist [] :spec-basis nil}
        :stake      nil
        :confidence 0.9}
-      {:summary    (str iso3 " (" (:owner-authority sb) ") 向け必要書類 "
-                        (count (:required-evidence sb)) " 件を提案")
-       :rationale  (str "公式ソース: " (:provenance sb) " / 法的根拠: " (:legal-basis sb))
-       :cites      [(:legal-basis sb) (:provenance sb)]
-       :effect     :assessment/set
-       :value      {:jurisdiction iso3
-                    :checklist (:required-evidence sb)
-                    :spec-basis (:provenance sb)
-                    :legal-basis (:legal-basis sb)}
-       :stake      nil
-       :confidence 0.9})))
+      (let [breg (facts/business-registration-spec-basis iso3)]
+        {:summary    (str iso3 " (" (:owner-authority sb) ") 向け必要書類 "
+                          (count (:required-evidence sb)) " 件を提案")
+         :rationale  (str "公式ソース: " (:provenance sb) " / 法的根拠: " (:legal-basis sb))
+         :cites      [(:legal-basis sb) (:provenance sb)]
+         :effect     :assessment/set
+         :value      {:jurisdiction iso3
+                      :checklist (:required-evidence sb)
+                      :spec-basis (:provenance sb)
+                      :legal-basis (:legal-basis sb)
+                      :business-registration-authority
+                      (if stale-authority?
+                        "FUNDEMPRESA"
+                        (:business-registration-owner-authority breg))}
+         :stake      nil
+         :confidence 0.9}))))
 
 (defn- propose-draft
   "Draft the actual FILING-DRAFT action. ALWAYS `:stake

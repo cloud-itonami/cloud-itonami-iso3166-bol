@@ -7,4 +7,44 @@
  :itonami.blueprint/governor :market-entry-compliance-governor
  :itonami.blueprint/robotics false
  :itonami.blueprint/required-technologies [:identity :forms :dmn :bpmn :audit-ledger]
- :itonami.blueprint/status :public-oss}
+ :itonami.blueprint/status :public-oss
+ :itonami.blueprint/maturity :implemented
+ :itonami.blueprint/implemented-slice
+ "src/marketentry/* (langgraph-clj StateGraph actor, compiled via
+ `operation/build` -> `g/state-graph` -> `g/compile-graph` with
+ `interrupt-before #{:request-approval}`): facts.cljc (official
+ spec-basis catalog, WebFetch/curl-verified 2026-07-22 -- SEPREC
+ (Servicio Plurinacional de Registro de Comercio) as the CURRENT
+ business-registration authority per Ley N° 1398 + Decreto Supremo N°
+ 4596 (2021), explicitly NOT the wound-down FUNDEMPRESA private
+ concession; SICOES/NB-SABS (D.S. N° 0181) as the procurement portal +
+ governing decree, owner-authority modeled at the Ministerio de
+ Economía y Finanzas Públicas ministry level per this family's no-
+ fabricated-directorate discipline; NIT/SIN as a separate tax-
+ registration act under a separate ministry), governor.cljc
+ (Market-Entry Compliance Governor -- spec-basis HARD check folded
+ with a `:stale-business-registration-authority` FLAGSHIP currency
+ check that HARD-holds any proposal citing FUNDEMPRESA as the current
+ authority, `evidence-incomplete` HARD check, `:incumplido-listed` HARD
+ check (unconditional per-`:filing/submit` SICOES 'incumplidos'
+ non-compliant-supplier-list membership check), `:nit-unverified` HARD
+ check, engagement-fee-mismatch independent recompute, confidence-floor/
+ actuation gate, plus double-draft/double-submit guards), store.cljc
+ (MemStore + DatomicStore via `io.github.kotoba-lang/langchain-store`
+ (`ls/enc`/`ls/dec*`/`ls/read-stream`/`ls/append-blob!`) instead of a
+ hand-rolled EDN-blob codec), registry.cljc (pure-function
+ filing-draft/filing-submit record construction + fee recompute),
+ marketentryllm.cljc (mock MarketEntry Advisor, with injectable
+ `:no-spec?`/`:stale-authority?` failure modes for governor-contract
+ testing), operation.cljc (intake -> advise -> govern -> decide ->
+ [request-approval ->] commit/hold StateGraph, `store/append-ledger!`
+ called from both the `:commit` and `:hold` nodes), phase.cljc (0->3
+ rollout, `:filing/draft`/`:filing/submit` permanently excluded from
+ every phase's `:auto` set). Also carries a `statute.facts` general-law
+ catalog (Código de Comercio, Ley General del Trabajo, CPE Art. 130
+ habeas-data -- Bolivia has NO comprehensive data-protection statute
+ yet, honestly not claimed) and a `culture.facts` regional-culture
+ catalog. 38 tests / 126 assertions passing (governor contract + store
+ parity + facts + phase + registry + culture + statute), clj-kondo
+ clean (0 errors, 9 non-fatal unused-binding/unused-require warnings,
+ same shape as sibling iso3166 actors and unrelated to this change)."}

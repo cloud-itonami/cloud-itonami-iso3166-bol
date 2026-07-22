@@ -260,6 +260,39 @@
                        :business-registration-legal-basis
                        :business-registration-provenance]))))
 
+;; ----------------------- business-registration currency trap -----------------------
+
+(def business-registration-authority-deprecated
+  "Names an advisor proposal may NOT cite as the CURRENT business-
+  registration authority for Bolivia. FUNDEMPRESA operated the Registro
+  de Comercio (Commercial Registry) under a private/mixed concession
+  model that Ley N° 1398 (1 de octubre de 2021) + Decreto Supremo N°
+  4596 (6 de octubre de 2021) wound down, transferring the function to
+  SEPREC (Servicio Plurinacional de Registro de Comercio), a
+  decentralized PUBLIC entity under the Ministerio de Desarrollo
+  Productivo y Economía Plural -- see the namespace docstring's
+  detailed citation trail. This catalog's own primary-source research
+  independently re-confirmed the STRUCTURAL fact (concession model
+  ended, public successor created) at HIGH confidence but did NOT
+  independently re-verify the specific legacy name 'FUNDEMPRESA'
+  against a freshly-fetched Bolivian primary source this session (Ley
+  1398's own text names the prior operator only generically as 'la
+  Concesionaria'). Regardless of that naming-provenance nuance,
+  'FUNDEMPRESA' is the name this prior concessionaire is universally
+  known by in public reporting, and any advisor proposal that cites it
+  as the CURRENT authority is citing stale/superseded training data,
+  not a live fact -- `marketentry.governor`'s `spec-basis-violations`
+  HARD-holds it regardless of confidence, mirroring the exact currency-
+  trap discipline `cloud-itonami-iso3166-isl` applies to the
+  decommissioned Ríkiskaup (superseded by Fjársýslan/FMA)."
+  #{"FUNDEMPRESA" "Fundempresa" "fundempresa"})
+
+(defn stale-business-registration-authority?
+  "True when `authority` names the wound-down FUNDEMPRESA concession
+  rather than the current public registrar SEPREC."
+  [authority]
+  (contains? business-registration-authority-deprecated authority))
+
 (defn restricted-supplier-spec-basis
   "The jurisdiction's restricted/unreliable-supplier-list regime, or
   nil. For BOL this is grounded at MODERATE confidence in SICOES's own
