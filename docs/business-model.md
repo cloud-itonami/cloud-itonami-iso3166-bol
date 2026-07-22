@@ -28,10 +28,18 @@
   from national and subnational entities
 - business/tax registration checklist: an active NIT (Número de
   Identificación Tributaria) with no outstanding debt to the SIN
-  (Servicio de Impuestos Nacionales), an eliminatory requirement for
-  public-procurement participation; commercial registration via SEPREC
-  (which absorbed FUNDEMPRESA's functions in 2021 under Supreme Decree
-  4644)
+  (Servicio de Impuestos Nacionales), a SEPARATE act from commercial
+  registration; commercial registration via SEPREC (Servicio
+  Plurinacional de Registro de Comercio), the decentralized public
+  entity that replaced the prior private concession model in 2021 per
+  Ley N° 1398 "Ley de Registro de Comercio" (1 de octubre de 2021) and
+  Decreto Supremo N° 4596 (6 de octubre de 2021, "Crea el Servicio
+  Plurinacional de Registro de Comercio – SEPREC y establece el plazo
+  de transición del Registro de Comercio") -- corrected 2026-07-22;
+  see `src/marketentry/facts.cljc` and `src/statute/facts.cljc` for the
+  full citation trail (a prior draft of this document cited "Supreme
+  Decree 4644", which this iteration could not verify and replaces
+  with the directly-fetched DS N° 4596 citation)
 - local-content / preferential-procurement navigation: Bolivian
   public-procurement preference provisions on qualifying tenders
 - ongoing regulatory-change monitoring subscription
