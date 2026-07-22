@@ -1,10 +1,12 @@
 (ns marketentry.governor
   "Market-Entry Compliance Governor -- the independent compliance layer
   that earns the MarketEntry-LLM the right to commit. The LLM has no
-  notion of Bolivian procurement law, whether a claimed engagement fee
-  actually equals base + months x rate, whether an engagement's own
-  declared incumplidos (non-compliant supplier) status was actually
-  checked, whether a NIT (Número de Identificación Tributaria) has been
+  notion of Bolivian procurement law, whether SEPREC (not the wound-down
+  FUNDEMPRESA concession) is actually the authority it should cite for
+  business registration, whether a claimed engagement fee actually
+  equals base + months x rate, whether an engagement's own declared
+  incumplidos (non-compliant supplier) status was actually checked,
+  whether a NIT (Número de Identificación Tributaria) has been
   verified for a filing that requires it, or when a draft stops being a
   draft and becomes a real-world sicoes.gob.bo/RUPE portal submission,
   so this MUST be a separate system able to *reject* a proposal and fall
@@ -30,7 +32,22 @@
     1. Spec-basis                  -- did the jurisdiction proposal cite
                                        an OFFICIAL source
                                        (`marketentry.facts`), or invent
-                                       one?
+                                       one? Folded into the SAME check:
+                                       a proposal that cites the wound-
+                                       down FUNDEMPRESA concession as
+                                       the CURRENT business-registration
+                                       authority (instead of SEPREC, the
+                                       public successor per Ley N° 1398
+                                       + D.S. N° 4596) is stale training
+                                       data, not a live fact -- HARD
+                                       hold regardless of confidence,
+                                       the SAME currency-trap discipline
+                                       `cloud-itonami-iso3166-isl`
+                                       applies to the decommissioned
+                                       Ríkiskaup. See
+                                       `marketentry.facts/stale-
+                                       business-registration-
+                                       authority?`.
     2. Evidence incomplete         -- for `:filing/draft`/
                                        `:filing/submit`, has the
                                        jurisdiction actually been
@@ -101,14 +118,30 @@
 (defn- spec-basis-violations
   "A `:jurisdiction/assess` (or `:filing/draft`/`:filing/submit`)
   proposal with no spec-basis citation is a HARD violation -- never
-  invent a jurisdiction's market-entry requirements."
+  invent a jurisdiction's market-entry requirements. FLAGSHIP currency
+  check folded into this SAME concern: a proposal that cites the
+  wound-down FUNDEMPRESA concession as the CURRENT business-
+  registration authority (instead of SEPREC, its public successor
+  since Ley N° 1398 + D.S. N° 4596, 2021) is stale training data, not a
+  live fact -- checked FIRST so a stale citation is never masked by an
+  otherwise-present `:cites` vector."
   [{:keys [op]} proposal]
   (when (contains? #{:jurisdiction/assess :filing/draft :filing/submit} op)
-    (let [value (:value proposal)]
-      (when (or (empty? (:cites proposal))
-                (and (contains? value :spec-basis) (nil? (:spec-basis value))))
+    (let [value (:value proposal)
+          breg-authority (:business-registration-authority value)]
+      (cond
+        (facts/stale-business-registration-authority? breg-authority)
+        [{:rule :stale-business-registration-authority
+          :detail (str "商業登記当局として\"" breg-authority "\" が引用されたが、これは2021年の"
+                      "Ley N° 1398 + Decreto Supremo N° 4596によりSEPRECへ移管され廃止された"
+                      "旧コンセッション事業者(FUNDEMPRESA) -- 現在の当局はSEPREC")}]
+
+        (or (empty? (:cites proposal))
+            (and (contains? value :spec-basis) (nil? (:spec-basis value))))
         [{:rule :no-spec-basis
-          :detail "公式spec-basisの引用が無い提案は法域要件として扱えない"}]))))
+          :detail "公式spec-basisの引用が無い提案は法域要件として扱えない"}]
+
+        :else nil))))
 
 (defn- evidence-incomplete-violations
   "For `:filing/draft`/`:filing/submit`, the jurisdiction's required

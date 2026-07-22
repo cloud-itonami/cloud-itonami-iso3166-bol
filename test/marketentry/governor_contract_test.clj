@@ -62,11 +62,30 @@
       (is (nil? (store/assessment-of db "eng-1")) "no assessment written"))))
 
 (deftest draft-without-assessment-is-held
-  (testing "filing/draft before any jurisdiction assessment -> HOLD (evidence incomplete)"
+  (testing "filing/draft before any jurisdiction assessment -> HOLD (evidence incomplete, i.e. no SEPREC/NIT/RUPE registration on file)"
     (let [[db actor] (fresh)
           res (exec-op actor "t4" {:op :filing/draft :subject "eng-1"} operator)]
       (is (= :hold (get-in res [:state :disposition])))
       (is (some #{:evidence-incomplete} (-> (store/ledger db) first :basis))))))
+
+(deftest stale-business-registration-authority-is-held-and-unoverridable
+  (testing "citing FUNDEMPRESA (the pre-2021 wound-down private concession) instead of SEPREC as the CURRENT business-registration authority -> HARD hold, never overridable by a human approver"
+    (let [[db actor] (fresh)
+          res (exec-op actor "t-fundempresa"
+                    {:op :jurisdiction/assess :subject "eng-1" :stale-authority? true} operator)]
+      (is (= :hold (get-in res [:state :disposition])) "settles immediately, no interrupt")
+      (is (not= :interrupted (:status res)))
+      (is (some #{:stale-business-registration-authority} (-> (store/ledger db) first :basis)))
+      (is (nil? (store/assessment-of db "eng-1")) "no assessment written on a stale-authority proposal"))))
+
+(deftest fresh-assess-cites-seprec-not-fundempresa
+  (testing "a clean assess (no injected failure mode) cites the CURRENT business-registration authority (SEPREC), never the wound-down FUNDEMPRESA"
+    (let [[db actor] (fresh)]
+      (assess! actor "t-clean" "eng-1")
+      (let [authority (:business-registration-authority (store/assessment-of db "eng-1"))]
+        (is (some? authority))
+        (is (not (contains? #{"FUNDEMPRESA" "Fundempresa"} authority)))
+        (is (re-find #"(?i)seprec" authority))))))
 
 (deftest incumplido-listed-is-held-and-unoverridable
   (testing "incumplidos (non-compliant supplier) list membership -> HARD hold (flagship check)"

@@ -37,6 +37,13 @@
     (is (not (facts/required-evidence-satisfied? "BOL" (take 1 all))))
     (is (nil? (facts/required-evidence-satisfied? "ATL" all)))))
 
+(deftest fundempresa-is-a-stale-business-registration-authority
+  (testing "FUNDEMPRESA (wound down 2021, replaced by SEPREC) must never be treated as current"
+    (is (true? (facts/stale-business-registration-authority? "FUNDEMPRESA")))
+    (is (true? (facts/stale-business-registration-authority? "Fundempresa")))
+    (is (false? (facts/stale-business-registration-authority? "SEPREC")))
+    (is (false? (facts/stale-business-registration-authority? nil)))))
+
 (deftest coverage-is-honest
   (let [c (facts/coverage ["BOL" "USA" "ATL"])]
     (is (= 3 (:requested c)))
