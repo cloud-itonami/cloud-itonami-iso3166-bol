@@ -36,7 +36,7 @@
   Decreto Supremo N° 4596 (6 de octubre de 2021, "Crea el Servicio
   Plurinacional de Registro de Comercio – SEPREC y establece el plazo
   de transición del Registro de Comercio") -- corrected 2026-07-22;
-  see `src/marketentry/facts.cljc` and `src/statute/facts.cljc` for the
+  see `src/marketentry/facts.kotoba` and `src/statute/facts.kotoba` for the
   full citation trail (a prior draft of this document cited "Supreme
   Decree 4644", which this iteration could not verify and replaces
   with the directly-fetched DS N° 4596 citation)
