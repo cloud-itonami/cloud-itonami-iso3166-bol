@@ -10,7 +10,7 @@ concession instead of the current public registrar SEPREC) plus
 membership) and `nit-unverified` (SIN tax registration).
 
 ```
-clojure -M:dev:test
+kbb -M:dev:test
 ```
 
 This repository designs **and implements** a forkable OSS business for an independent
